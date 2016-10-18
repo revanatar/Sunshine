@@ -65,6 +65,7 @@ public class MainActivity extends ActionBarActivity {
                 .appendQueryParameter("q", location)
                 .build();
 
+        Log.v("geoLocation", geoLocation.toString());
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setData(geoLocation);
 
