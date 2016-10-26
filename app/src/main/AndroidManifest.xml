@@ -41,10 +41,10 @@
                 android:value=".MainActivity"
                 />
         </activity>
-
         <provider
             android:authorities="com.example.android.sunshine.app"
             android:name=".data.WeatherProvider"
+            android:exported="true"
             />
     </application>
 
