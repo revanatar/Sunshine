@@ -11,20 +11,34 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity implements ForecastFragment.Callback {
 
+    private static final String DETAILFRAGMENT_TAG = "DFTAG";
     private final String LOG_TAG = MainActivity.class.getSimpleName();
-    private final String FORECASTFRAGMENT_TAG = "FFTAG";
+    private boolean mTwoPane;
     private String mLocation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .add(R.id.container, new ForecastFragment(), FORECASTFRAGMENT_TAG)
-                    .commit();
+
+        if (findViewById(R.id.weather_detail_container) != null) {
+            // The detail container view will be present only in the large-screen layouts
+            // (res/layout-sw600dp). If this view is present, then the activity should be
+            // in two-pane mode.
+            mTwoPane = true;
+            // In two-pane mode, show the detail view in this activity by
+            // adding or replacing the detail fragment using a
+            // fragment transaction.
+            if (savedInstanceState == null) {
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.weather_detail_container, new DetailFragment(), DETAILFRAGMENT_TAG)
+                        .commit();
+            }
+        } else {
+            mTwoPane = false;
         }
     }
 
@@ -57,6 +71,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void openPreferredLocationInMap() {
+
         SharedPreferences sharedPrefs =
                 PreferenceManager.getDefaultSharedPreferences(this);
         String location = sharedPrefs.getString(
@@ -80,15 +95,53 @@ public class MainActivity extends ActionBarActivity {
 
     @Override
     protected void onResume() {
+
         super.onResume();
         String location = Utility.getPreferredLocation(this);
         // update the location in our second pane using the fragment manager
         if (location != null && !location.equals(mLocation)) {
-            ForecastFragment ff = (ForecastFragment) getSupportFragmentManager().findFragmentByTag(FORECASTFRAGMENT_TAG);
+            ForecastFragment ff = (ForecastFragment) getSupportFragmentManager()
+                    .findFragmentById(R.id.fragment_forecast);
             if (null != ff) {
                 ff.onLocationChanged();
+                DetailFragment df = (DetailFragment) getSupportFragmentManager()
+                        .findFragmentByTag(DETAILFRAGMENT_TAG);
+                if (null != df) {
+                    df.onLocationChanged(location);
+                }
+            }
+            DetailFragment df = (DetailFragment) getSupportFragmentManager()
+                    .findFragmentByTag(DETAILFRAGMENT_TAG);
+            if (null != df) {
+                df.onLocationChanged(location);
             }
             mLocation = location;
+        }
+    }
+
+    /**
+     * DetailFragmentCallback for when an item has been selected.
+     */
+    @Override
+    public void onItemSelected(Uri contentUri) {
+
+        if (mTwoPane) {
+            // In two-pane mode, show the detail view in this activity by
+            // adding or replacing the detail fragment using a
+            // fragment transaction.
+            Bundle args = new Bundle();
+            args.putParcelable(DetailFragment.DETAIL_URI, contentUri);
+
+            DetailFragment fragment = new DetailFragment();
+            fragment.setArguments(args);
+
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.weather_detail_container, fragment, DETAILFRAGMENT_TAG)
+                    .commit();
+        } else {
+            Intent intent = new Intent(this, DetailActivity.class)
+                    .setData(contentUri);
+            startActivity(intent);
         }
     }
 }

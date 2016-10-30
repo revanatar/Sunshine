@@ -2,6 +2,7 @@ package com.example.android.sunshine.app;
 
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
@@ -9,7 +10,6 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.widget.ShareActionProvider;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -27,6 +27,12 @@ import com.example.android.sunshine.app.data.WeatherContract.WeatherEntry;
  */
 public class DetailFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
 
+    private static final String LOG_TAG = DetailFragment.class.getSimpleName();
+    static final String DETAIL_URI = "URI";
+
+    private static final String FORECAST_SHARE_HASHTAG = " #SunshineApp";
+
+
     // These indices are tied to DETAIL_COLUMNS.  If DETAIL_COLUMNS changes, these
     // must change.
     public static final int COL_WEATHER_ID = 0;
@@ -39,8 +45,6 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     public static final int COL_WEATHER_WIND_SPEED = 7;
     public static final int COL_WEATHER_DEGREES = 8;
     public static final int COL_WEATHER_CONDITION_ID = 9;
-    private static final String LOG_TAG = DetailFragment.class.getSimpleName();
-    private static final String FORECAST_SHARE_HASHTAG = " #SunshineApp";
     private static final int DETAIL_LOADER = 0;
     private static final String[] DETAIL_COLUMNS = {
             WeatherEntry.TABLE_NAME + "." + WeatherEntry._ID,
@@ -59,6 +63,7 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     };
     private ShareActionProvider mShareActionProvider;
     private String mForecast;
+    private Uri mUri;
     private ImageView mIconView;
     private TextView mFriendlyDateView;
     private TextView mDateView;
@@ -70,12 +75,19 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     private TextView mPressureView;
 
     public DetailFragment() {
+
         setHasOptionsMenu(true);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+
+        Bundle arguments = getArguments();
+        if (arguments != null) {
+            mUri = arguments.getParcelable(DetailFragment.DETAIL_URI);
+        }
+
         View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
         mIconView = (ImageView) rootView.findViewById(R.id.detail_icon);
         mDateView = (TextView) rootView.findViewById(R.id.detail_date_textview);
@@ -87,6 +99,18 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
         mWindView = (TextView) rootView.findViewById(R.id.detail_wind_textview);
         mPressureView = (TextView) rootView.findViewById(R.id.detail_pressure_textview);
         return rootView;
+    }
+
+    void onLocationChanged(String newLocation) {
+        // replace the uri, since the location has changed
+        Uri uri = mUri;
+        if (null != uri) {
+            long date = WeatherContract.WeatherEntry.getDateFromUri(uri);
+            Uri updatedUri = WeatherContract.WeatherEntry
+                    .buildWeatherLocationWithDate(newLocation, date);
+            mUri = updatedUri;
+            getLoaderManager().restartLoader(DETAIL_LOADER, null, this);
+        }
     }
 
     @Override
@@ -107,6 +131,7 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     }
 
     private Intent createShareForecastIntent() {
+
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
         shareIntent.setType("text/plain");
@@ -116,37 +141,37 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
+
         getLoaderManager().initLoader(DETAIL_LOADER, null, this);
         super.onActivityCreated(savedInstanceState);
     }
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        Log.v(LOG_TAG, "In onCreateLoader");
-        Intent intent = getActivity().getIntent();
-        if (intent == null) {
-            return null;
-        }
 
-        // Now create and return a CursorLoader that will take care of
-        // creating a Cursor for the data being displayed.
-        return new CursorLoader(
-                getActivity(),
-                intent.getData(),
-                DETAIL_COLUMNS,
-                null,
-                null,
-                null
-        );
+        if (null != mUri) {
+            // Now create and return a CursorLoader that will take care of
+            // creating a Cursor for the data being displayed.
+            return new CursorLoader(
+                    getActivity(),
+                    mUri,
+                    DETAIL_COLUMNS,
+                    null,
+                    null,
+                    null
+            );
+        }
+        return null;
     }
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+
         if (data != null && data.moveToFirst()) {
             // Read weather condition ID from cursor
             int weatherId = data.getInt(COL_WEATHER_CONDITION_ID);
             // Use placeholder Image
-            mIconView.setImageResource(R.drawable.ic_launcher);
+            mIconView.setImageResource(Utility.getArtResourceForWeatherCondition(weatherId));
 
             // Read date from cursor and update views for day of week and date
             long date = data.getLong(COL_WEATHER_DATE);
@@ -178,7 +203,8 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
             // Read wind speed and direction from cursor and update view
             float windSpeedStr = data.getFloat(COL_WEATHER_WIND_SPEED);
             float windDirStr = data.getFloat(COL_WEATHER_DEGREES);
-            mWindView.setText(Utility.getFormattedWind(getActivity(), windSpeedStr, windDirStr));
+            mWindView
+                    .setText(Utility.getFormattedWind(getActivity(), windSpeedStr, windDirStr));
 
             // Read pressure from cursor and update view
             float pressure = data.getFloat(COL_WEATHER_PRESSURE);
@@ -195,5 +221,8 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     }
 
     @Override
-    public void onLoaderReset(Loader<Cursor> loader) { }
+    public void onLoaderReset(Loader<Cursor> loader) {
+
+    }
+
 }

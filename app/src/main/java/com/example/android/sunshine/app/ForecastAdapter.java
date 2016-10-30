@@ -20,6 +20,7 @@ public class ForecastAdapter extends CursorAdapter {
     private static final int VIEW_TYPE_FUTURE_DAY = 1;
 
     public ForecastAdapter(Context context, Cursor c, int flags) {
+
         super(context, c, flags);
     }
 
@@ -31,6 +32,7 @@ public class ForecastAdapter extends CursorAdapter {
         // Choose the layout type
         int viewType = getItemViewType(cursor.getPosition());
         int layoutId = -1;
+
         switch (viewType) {
             case VIEW_TYPE_TODAY: {
                 layoutId = R.layout.list_item_forecast_today;
@@ -41,6 +43,7 @@ public class ForecastAdapter extends CursorAdapter {
                 break;
             }
         }
+
         View view = LayoutInflater.from(context).inflate(layoutId, parent, false);
 
         ViewHolder viewHolder = new ViewHolder(view);
@@ -50,16 +53,28 @@ public class ForecastAdapter extends CursorAdapter {
     }
 
     /*
-            This is where we fill-in the views with the contents of the cursor.
-         */
+        This is where we fill-in the views with the contents of the cursor.
+     */
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
-        // our view is pretty simple here --- just a text view
-        // we'll keep the UI functional with a simple (and slow!) binding.
 
         ViewHolder viewHolder = (ViewHolder) view.getTag();
-        // Use placeholder image for now
-        viewHolder.iconView.setImageResource(R.drawable.ic_launcher);
+        int viewType = getItemViewType(cursor.getPosition());
+
+        switch (viewType) {
+            case VIEW_TYPE_TODAY: {
+                // Get weather icon
+                viewHolder.iconView.setImageResource(Utility.getArtResourceForWeatherCondition(
+                        cursor.getInt(ForecastFragment.COL_WEATHER_CONDITION_ID)));
+                break;
+            }
+            case VIEW_TYPE_FUTURE_DAY: {
+                // Get weather icon
+                viewHolder.iconView.setImageResource(Utility.getIconResourceForWeatherCondition(
+                        cursor.getInt(ForecastFragment.COL_WEATHER_CONDITION_ID)));
+                break;
+            }
+        }
 
         // Read date from cursor
         long dateInMillis = cursor.getLong(ForecastFragment.COL_WEATHER_DATE);
@@ -85,11 +100,13 @@ public class ForecastAdapter extends CursorAdapter {
 
     @Override
     public int getItemViewType(int position) {
+
         return position == 0 ? VIEW_TYPE_TODAY : VIEW_TYPE_FUTURE_DAY;
     }
 
     @Override
     public int getViewTypeCount() {
+
         return VIEW_TYPE_COUNT;
     }
 
@@ -97,6 +114,7 @@ public class ForecastAdapter extends CursorAdapter {
      * Cache of the children views for a forecast list item.
      */
     public static class ViewHolder {
+
         public final ImageView iconView;
         public final TextView dateView;
         public final TextView descriptionView;
@@ -104,6 +122,7 @@ public class ForecastAdapter extends CursorAdapter {
         public final TextView lowTempView;
 
         public ViewHolder(View view) {
+
             iconView = (ImageView) view.findViewById(R.id.list_item_icon);
             dateView = (TextView) view.findViewById(R.id.list_item_date_textview);
             descriptionView = (TextView) view.findViewById(R.id.list_item_forecast_textview);
