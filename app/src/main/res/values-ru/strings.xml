@@ -10,8 +10,6 @@
     <string name="pref_location_label">Локация</string>
     <string name="pref_units_label_imperial">Имперские</string>
     <string name="pref_units_label_metric">Метрические</string>
-    <string name="pref_units_key" translatable="false"></string>
     <string name="title_activity_detail">Подробно</string>
     <string name="title_activity_settings">Настройки</string>
-    <string name="format_full_friendly_date"></string>
 </resources>
